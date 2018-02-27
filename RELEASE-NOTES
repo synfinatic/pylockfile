@@ -1,3 +1,8 @@
+Version 0.12.3
+==============
+
+ * Fix bug in handling of stale lockfiles
+
 Version 0.9.1
 =============
 
