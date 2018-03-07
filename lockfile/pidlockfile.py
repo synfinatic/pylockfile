@@ -21,7 +21,7 @@ import time
 from . import (LockBase, AlreadyLocked, LockFailed, NotLocked, NotMyLock,
                LockTimeout)
 
-
+
 class PIDLockFile(LockBase):
     """ Lockfile implemented as a Unix PID file.
 
@@ -47,10 +47,19 @@ class PIDLockFile(LockBase):
     def is_locked(self):
         """ Test if the lock is currently held.
 
-            The lock is held if the PID file for this lock exists.
+            The lock is held if the PID file for this lock exists *AND*
+            the underlying pid is running
 
+            Will also clean up stale PID lock files
             """
-        return os.path.exists(self.path)
+        if not os.path.exists(self.path):
+            return False
+        try:
+            os.kill(self.read_pid(), 0)
+        except (OSError, TypeError):
+            os.unlink(self.path)
+            return False
+        return True
 
     def i_am_locking(self):
         """ Test if the lock is held by the current process.
@@ -74,6 +83,7 @@ class PIDLockFile(LockBase):
 
         while True:
             try:
+                self.is_locked()  # Cleanup stale lockfile if necessary
                 write_pid_to_pidfile(self.path)
             except OSError as exc:
                 if exc.errno == errno.EEXIST:
